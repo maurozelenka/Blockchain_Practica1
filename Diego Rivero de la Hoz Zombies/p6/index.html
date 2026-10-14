@@ -10,31 +10,40 @@
   <body>
     <div id="txStatus"></div>
     <div id="zombies"></div>
+
     <script>
       var cryptoZombies;
       var userAccount;
+
       function startApp() {
         var cryptoZombiesAddress = "YOUR_CONTRACT_ADDRESS";
         cryptoZombies = new web3js.eth.Contract(cryptoZombiesABI, cryptoZombiesAddress);
+
         var accountInterval = setInterval(function() {
-          // Comprobar si la cuenta ha sido cambiada
+         
           if (web3.eth.accounts[0] !== userAccount) {
             userAccount = web3.eth.accounts[0];
-            // Llamar la función que va a updatear la UI with de la nueva cuenta
+           
             getZombiesByOwner(userAccount)
             .then(displayZombies);
           }
         }, 100);
-        // Empieza aquí
+
+        cryptoZombies.events.Transfer({ filter: { _to: userAccount } })
+        .on("data", function(event) {
+          let data = event.returnValues;
+          getZombiesByOwner(userAccount).then(displayZombies);
+        }).on("error", console.error);
       }
+
       function displayZombies(ids) {
         $("#zombies").empty();
         for (const id of ids) {
-          // Obtener los detalles del zombi de nuestro contrato. Devuelve un objeto `zombie`
+         
           getZombieDetails(id)
           .then(function(zombie) {
-            // Se usa las "template literals" (plantillas literales) de ES6 para inyectar variables al HTML.
-            // Se adjunta cada uno a nuestro div #zombies
+           
+           
             $("#zombies").append(`<div class="zombie">
               <ul>
                 <li>Name: ${zombie.name}</li>
@@ -48,23 +57,25 @@
           });
         }
       }
+
       function createRandomZombie(name) {
-        // Esto va a tardar un rato, así que vamos a updatear la UI para que el usuario
-        // sepa que la transacción se ha hecho correctamente
+       
+       
         $("#txStatus").text("Creating new zombie on the blockchain. This may take a while...");
-        // Enviar el texto hacia nuestro contrato:
+       
         return cryptoZombies.methods.createRandomZombie(name)
         .send({ from: userAccount })
         .on("receipt", function(receipt) {
           $("#txStatus").text("Successfully created " + name + "!");
-          // La transacción ha sido aceptada por la blockchain, así que vamos a redibujar la UI
+         
           getZombiesByOwner(userAccount).then(displayZombies);
         })
         .on("error", function(error) {
-          // Se avisa al usuario de que su transacción no ha sido completada con éxito
+         
           $("#txStatus").text(error);
         });
       }
+
       function feedOnKitty(zombieId, kittyId) {
         $("#txStatus").text("Eating a kitty. This may take a while...");
         return cryptoZombies.methods.feedOnKitty(zombieId, kittyId)
@@ -77,6 +88,7 @@
           $("#txStatus").text(error);
         });
       }
+
       function levelUp(zombieId) {
         $("#txStatus").text("Leveling up your zombie...");
         return cryptoZombies.methods.levelUp(zombieId)
@@ -88,26 +100,33 @@
           $("#txStatus").text(error);
         });
       }
+
       function getZombieDetails(id) {
         return cryptoZombies.methods.zombies(id).call()
       }
+
       function zombieToOwner(id) {
         return cryptoZombies.methods.zombieToOwner(id).call()
       }
+
       function getZombiesByOwner(owner) {
         return cryptoZombies.methods.getZombiesByOwner(owner).call()
       }
+
       window.addEventListener('load', function() {
-        // Aquí se comprueba si Web3.js ha sido inyecto por el navegador (Mist/MetaMask)
+
+       
         if (typeof web3 !== 'undefined') {
-          // Usar el proveedor Mist/MetaMask
+         
           web3js = new Web3(web3.currentProvider);
         } else {
-          // Aquí se podría poner algo para avisar al usuario de que no tiene Metamask o Mist instalado
-          // Probablemente mostrarle un mensake pidiéndole que se lo instale
+         
+         
         }
-        // Ahora ya puedes acceder libremente a tu DApp y usar Web3:
+
+       
         startApp()
+
       })
     </script>
   </body>
